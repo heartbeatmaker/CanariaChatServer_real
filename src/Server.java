@@ -18,14 +18,22 @@ public class Server {
 
     ArrayList<Guest> listOfGuestsAtLobby; //대기실에 있는 손님 목록
 
-    HashMap<Integer, ArrayList<Guest>> roomHashMap; //방 목록 맵(방이름, 방에 속한 클라이언트 목록)
+    HashMap<Integer, ArrayList<Guest>> roomHashMap; //방 목록 맵(방id, 방에 속한 클라이언트 목록)
+
+    HashMap<Integer, HashMap<Integer, String>> roomHashMap_onlyId; //방 목록 맵(방id, 방에 속한 클라이언트 정보<id, username>)
+
 
 
     void initNet() throws Exception {
 
         roomHashMap = new HashMap<Integer, ArrayList<Guest>>();
+        roomHashMap_onlyId = new HashMap<>();
 
 //        listOfGuestsAtLobby = new ArrayList<Guest>();
+
+        ConnectDB connectDB = new ConnectDB();
+        connectDB.connect(); //db 연결
+
 
         //서버소켓 생성. 클라이언트 접속을 기다림
         ServerSocket serverSocket = new ServerSocket(ServerPort);
@@ -40,7 +48,7 @@ public class Server {
             //Guest 클래스: 클라이언트와의 데이터 송수신을 처리하는 서버측 클래스(보기 편하라고 나눔)
             //생성자 1 (Server): 서버의 메소드를 사용하기 위해 필요
             //생성자 2 (socket): 클라이언트와의 데이터 송수신을 위해 필요
-            Guest guestThread = new Guest(this, socket);
+            Guest guestThread = new Guest(this, socket, connectDB);
 
             guestThread.start();
 //            addGuest(guestThread); //새로운 게스트 객체를 로비 사용자 리스트에 추가한다
@@ -50,60 +58,92 @@ public class Server {
 
     ///////////////////////////////////////
 
+    void enterExistingRoom(int roomId, String roomName, Guest guest) throws Exception{
 
-    void checkIfRoomExists(int roomId, String roomName, Guest guest) throws Exception{
+        boolean isAlreadyMember = false;
 
-        if(roomHashMap.get(roomId) == null){ //이런 이름의 방이 존재하지 않는다면
+        //기존에 저장되어있던 socket을 현재 것으로 바꾼다
+        ArrayList<Guest> listOfGuestsInTheRoom = roomHashMap.get(roomId);
+        for(int i=0; i<listOfGuestsInTheRoom.size(); i++){
+            Guest anonymous_guest = listOfGuestsInTheRoom.get(i);
+            if(anonymous_guest.id == guest.id){
 
-            consoleLog(roomId +" does not exist. Create one.");
+                anonymous_guest.socket = guest.socket;
+                anonymous_guest.reader = guest.reader;
+                anonymous_guest.writer = guest.writer;
 
-            addRoom(roomId, guest); //방을 새로 생성한다
-            guest.sendMsg("serverMsg/A room is created."); //입장 메시지 발송
-            broadcastRoomInfo(roomId, roomName); //방 정보 업데이트
-
-        }else{ //이미 해당 이름의 방이 있다면
-
-            consoleLog(roomId +" already exists.");
-
-            //이미 참여중인 방인지 확인
-            boolean isAlreadyJoinedRoom = false;
-            int index;
-
-            ArrayList<Guest> listOfGuestsInTheRoom = roomHashMap.get(roomId);
-            for(int i=0; i<listOfGuestsInTheRoom.size(); i++){
-                Guest anonymous_guest = listOfGuestsInTheRoom.get(i);
-                if(anonymous_guest.id.equals(guest.id)){
-                    isAlreadyJoinedRoom = true;
-
-                    anonymous_guest.socket = guest.socket;
-                    anonymous_guest.reader = guest.reader;
-                    anonymous_guest.writer = guest.writer;
-                }
+                consoleLog(guest.username +" is already a member of "+roomName);
+                isAlreadyMember = true;
             }
-
-            consoleLog("isAlreadyJoinedRoom = "+isAlreadyJoinedRoom);
-
-            if(isAlreadyJoinedRoom){
-
-                consoleLog(guest.username+" has already joined "+roomId);
-
-                broadcastToRoomExceptMe(roomId, "return/"+guest.username+" is back.", guest.id); //다른 사람에게 보내는 메시지
-                guest.sendMsg("myReturn/Welcome back.");//나에게 보내는 메시지
-                broadcastRoomInfo(roomId, roomName);
-
-            }else{ //새로 가입한 방이라면
-
-                consoleLog(guest.username+" is new to "+roomId);
-
-                //join/welcome(나) --- join/oo entered the room(다른사람)
-                addGuestToRoom(roomId, guest); //기존 방에 해당 유저를 추가한다
-                broadcastToRoomExceptMe(roomId, "join/"+guest.username+" entered the room.", guest.id); //다른 사람에게 보내는 입장 메시지
-                guest.sendMsg("myJoin/Welcome."); //나에게 보내는 입장 메시지
-                broadcastRoomInfo(roomId, roomName); //방 정보 업데이트
-            }
-
         }
+
+        if(isAlreadyMember){
+            broadcastToRoomExceptMe(roomId, "return/"+guest.username+" is back.", guest.id); //다른 사람에게 보내는 메시지
+            guest.sendMsg("myReturn/Welcome back.");//나에게 보내는 메시지
+            broadcastRoomInfo(roomId, roomName);
+        }else{
+            consoleLog("Error) "+guest.username+ " is a member of "+roomName+ ". But not listed!!");
+        }
+
     }
+
+
+
+
+
+//    void checkIfRoomExists(int roomId, String roomName, Guest guest) throws Exception{
+//
+//        if(roomHashMap.get(roomId) == null){ //이런 이름의 방이 존재하지 않는다면
+//
+//            consoleLog(roomId +" does not exist. Create one.");
+//
+//            addRoom(roomId, guest); //방을 새로 생성한다
+//            guest.sendMsg("serverMsg/A room is created."); //입장 메시지 발송
+//            broadcastRoomInfo(roomId, roomName); //방 정보 업데이트
+//
+//        }else{ //이미 해당 이름의 방이 있다면
+//
+//            consoleLog(roomId +" already exists.");
+//
+//            //이미 참여중인 방인지 확인
+//            boolean isAlreadyJoinedRoom = false;
+//            int index;
+//
+//            ArrayList<Guest> listOfGuestsInTheRoom = roomHashMap.get(roomId);
+//            for(int i=0; i<listOfGuestsInTheRoom.size(); i++){
+//                Guest anonymous_guest = listOfGuestsInTheRoom.get(i);
+//                if(anonymous_guest.id == guest.id){
+//                    isAlreadyJoinedRoom = true;
+//
+//                    anonymous_guest.socket = guest.socket;
+//                    anonymous_guest.reader = guest.reader;
+//                    anonymous_guest.writer = guest.writer;
+//                }
+//            }
+//
+//            consoleLog("isAlreadyJoinedRoom = "+isAlreadyJoinedRoom);
+//
+//            if(isAlreadyJoinedRoom){
+//
+//                consoleLog(guest.username+" has already joined "+roomId);
+//
+//                broadcastToRoomExceptMe(roomId, "return/"+guest.username+" is back.", guest.id); //다른 사람에게 보내는 메시지
+//                guest.sendMsg("myReturn/Welcome back.");//나에게 보내는 메시지
+//                broadcastRoomInfo(roomId, roomName);
+//
+//            }else{ //새로 가입한 방이라면
+//
+//                consoleLog(guest.username+" is new to "+roomId);
+//
+//                //join/welcome(나) --- join/oo entered the room(다른사람)
+//                addGuestToRoom(roomId, guest); //기존 방에 해당 유저를 추가한다
+//                broadcastToRoomExceptMe(roomId, "join/"+guest.username+" entered the room.", guest.id); //다른 사람에게 보내는 입장 메시지
+//                guest.sendMsg("myJoin/Welcome."); //나에게 보내는 입장 메시지
+//                broadcastRoomInfo(roomId, roomName); //방 정보 업데이트
+//            }
+//
+//        }
+//    }
 
 
 
@@ -160,20 +200,39 @@ public class Server {
     }
 
 
+    //사용자를 방의 손님목록에 추가하는 메소드
+    void addGuestIdToRoom(int roomId, int guest_id, String username) {
+
+        //방 목록 맵에 저장되어 있던, 이 방의 손님정보 hashmap<user_id, username>을 참조한다
+        HashMap<Integer, String> guestInfoInTheRoom_copied = roomHashMap_onlyId.get(roomId);
+
+        //그 리스트에 손님을 추가한다
+        guestInfoInTheRoom_copied.put(guest_id, username);
+
+        //방 이름과 손님 수를 서버 콘솔에 출력한다
+        consoleLog(guest_id+" is added to id_only list. total members of the room="+guestInfoInTheRoom_copied.size());
+    }
+
+
+
     //새로운 방을 생성하는 메소드
     void addRoom(int roomId, Guest guest) {
 
         //새로운 손님 리스트를 생성
-        ArrayList<Guest> listOfGuestsOfNewRoom = new ArrayList<Guest>();
+        ArrayList<Guest> listOfGuestsOfNewRoom = new ArrayList<Guest>(); //손님 객체를 저장
+        HashMap<Integer, String> listOfGuestsIdOfNewRoom = new HashMap<>(); //손님의 id, username만 저장
 
         //이 리스트에 방을 만든 게스트를 추가한다
         listOfGuestsOfNewRoom.add(guest);
+        listOfGuestsIdOfNewRoom.put(guest.id, guest.username);
 
         //방 목록 hashmap에 이 방을 추가한다
         roomHashMap.put(roomId, listOfGuestsOfNewRoom);
+        roomHashMap_onlyId.put(roomId, listOfGuestsIdOfNewRoom);
 
-        consoleLog("Name of the new Room :" + roomId);
-        consoleLog("Number of Guests(It must be '1') :" + listOfGuestsOfNewRoom.size());
+        consoleLog("A room is created: " + roomId);
+        consoleLog("total members of the room(it must be 1; guest object)" + listOfGuestsOfNewRoom.size());
+        consoleLog("total members of the room(it must be 1; id only)" + listOfGuestsIdOfNewRoom.size());
     }
 
 
@@ -234,12 +293,12 @@ public class Server {
     }
 
 
-    void broadcastToRoomExceptMe(int roomId, String msg, String userId) throws Exception {
+    void broadcastToRoomExceptMe(int roomId, String msg, int userId) throws Exception {
 
         ArrayList<Guest> listOfGuestsInTheRoom = roomHashMap.get(roomId);
 
         for (Guest guest : listOfGuestsInTheRoom) {
-            if(!guest.id.equals(userId)){
+            if(guest.id != userId){
                 guest.sendMsg(msg);
             }
         }
@@ -263,18 +322,39 @@ public class Server {
 
     //특정 방의 정보를 발송한다
     //roomInfo/방이름/참여자 수/user1, user2, user3 -- 이런 식으로
+//    void broadcastRoomInfo(int roomId, String roomName) throws Exception {
+//
+//        ArrayList<Guest> guestListOfTheRoom = roomHashMap.get(roomId);
+//
+//        StringBuffer buffer_roomInfo = new StringBuffer("roomInfo/"+roomName+" ("+guestListOfTheRoom.size()+") ");
+//
+//        for (Guest guest : guestListOfTheRoom) {
+//            buffer_roomInfo.append(guest.username + ", ");
+//        }
+//
+//        broadcastToRoom(roomId, buffer_roomInfo.toString());
+//    }
+
+
+    //특정 방의 정보를 발송한다
+    //roomInfo/방이름/참여자 수/user1, user2, user3 -- 이런 식으로
     void broadcastRoomInfo(int roomId, String roomName) throws Exception {
 
-        ArrayList<Guest> guestListOfTheRoom = roomHashMap.get(roomId);
+        HashMap<Integer, String> guestListOfTheRoom = roomHashMap_onlyId.get(roomId);
 
         StringBuffer buffer_roomInfo = new StringBuffer("roomInfo/"+roomName+" ("+guestListOfTheRoom.size()+") ");
 
-        for (Guest guest : guestListOfTheRoom) {
-            buffer_roomInfo.append(guest.username + ", ");
+        //key=user id / .get(key)=username
+        for (int key : guestListOfTheRoom.keySet()) {
+            buffer_roomInfo.append(guestListOfTheRoom.get(key)+", ");
         }
+
+        //마지막 쉼표 제거
+        buffer_roomInfo.deleteCharAt(buffer_roomInfo.length()-1);
 
         broadcastToRoom(roomId, buffer_roomInfo.toString());
     }
+
 
 
     //서버 콘솔에 로그 남기기

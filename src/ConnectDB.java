@@ -2,13 +2,13 @@ import java.sql.*;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
-public class jdbcTest {
+public class ConnectDB {
 
     Connection connection = null;
     Statement statement = null;
     ResultSet resultSet = null;
 
-    public void connectDB() throws Exception{
+    public void connect() throws Exception{
         try{
             //드라이버 인터페이스를 구현한 클래스를 로딩한다
             Class.forName("com.mysql.jdbc.Driver");
@@ -22,19 +22,51 @@ public class jdbcTest {
             System.out.println("connected to MYSql");
 
             //쿼리 실행
-            startQuery();
+//            startQuery();
         }catch(SQLException e){
             System.out.println("jdbc connection error: "+e);
-        }finally {
-            if(connection != null){
-                try{
-                    connection.close();
-                }catch (SQLException e){
-                    System.out.println("jdbc connection error: "+e);
-                }
+        }
+
+//        finally {
+//            if(connection != null){
+//                try{
+//                    connection.close();
+//                }catch (SQLException e){
+//                    System.out.println("jdbc connection error: "+e);
+//                }
+//            }
+//        }
+    }
+
+
+    public int insertRoom() throws Exception{
+
+        String sql = "insert into roomInfo(room_name) values(?)";
+
+        int inserted_id;
+
+        //insert 된 id를 반환받기 위해서는, parameter로 Statement.RETURN_GENERATED_KEYS 를 넘겨줘야 한다
+        PreparedStatement pstmt = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
+        pstmt.setString(1,"room");
+
+        int resultCnt = pstmt.executeUpdate(); //영향을 받은 row의 개수를 반환한다
+        System.out.println("Succeeded to insert items. row count = "+resultCnt);
+
+        //삽입된 id를 확인한다
+        try (ResultSet generatedKeys = pstmt.getGeneratedKeys()) {
+            if (generatedKeys.next()) {
+                inserted_id = generatedKeys.getInt(1);
+                System.out.println("-------------------- INSERT -----------------");
+                System.out.println("inserted id = "+inserted_id);
+                System.out.println("----------------------------------------------");
+            }
+            else {
+                throw new SQLException("Error: No id returned");
             }
         }
+        return inserted_id;
     }
+
 
 
     public void startQuery(){
@@ -135,12 +167,12 @@ public class jdbcTest {
     }
 
 
-    public static void main(String args[]) throws Exception {
-
-        jdbcTest test = new jdbcTest();
-
-        test.connectDB();
-
-
-    }
+//    public static void main(String args[]) throws Exception {
+//
+//        ConnectDB con = new ConnectDB();
+//
+//        con.connect();
+//
+//
+//    }
 }

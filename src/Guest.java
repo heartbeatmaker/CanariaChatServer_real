@@ -1,11 +1,14 @@
+
 import java.io.*;
 import java.net.Socket;
+import java.util.Arrays;
+import java.util.HashMap;
 
 
 //클라이언트와의 데이터 송수신을 처리하는 서버측 클래스
 class Guest extends Thread {
 
-    String id;
+    int id;
     String username;
     String roomName;
     int roomId;
@@ -13,12 +16,15 @@ class Guest extends Thread {
     Socket socket;
     BufferedReader reader;
     BufferedWriter writer;
+    ConnectDB connect;
 
 
-    Guest(Server server, Socket socket) throws Exception {
+    Guest(Server server, Socket socket, ConnectDB connect) throws Exception {
 
         this.server = server;
         this.socket = socket;
+
+        this.connect = connect;
 
         InputStream is = socket.getInputStream();
         InputStreamReader isr = new InputStreamReader(is);
@@ -40,20 +46,62 @@ class Guest extends Thread {
 
                 switch (array[0]) {
 
-                    //enter/id/username
-                    case "connect":
-                        id = array[1]; //사용자 id
+                    //새로운 방 개설해달라는 메시지
+                    //new_room/userId/username/friendInfo(=jsonArray.toString)
+                    case "new_room":
+                        id = Integer.valueOf(array[1]); //사용자 id
+                        username = array[2]; //사용자 username
+                        String friendInfo_string = array[3]; //참여자id;username;id;username ...
+
+                        System.out.println(username+" created a room.");
+                        System.out.println("FriendInfo="+friendInfo_string);
+
+                        //db에 방 정보를 저장하고, 방 id를 얻는다
+                        roomId = connect.insertRoom();
+                        System.out.println("roomId="+roomId);
+
+                        //방을 개설하고, 현 사용자(=방 개설자)를 그 방에 join 시킨다
+                        server.addRoom(roomId, this);
+
+                        //나머지 참여자(=초대된 사람들)들은 guest 객체를 저장할 수 없다(로비 사용자이므로)
+                        //따라서 그들의 id값만 다른 리스트에 저장해 놓는다
+                        String[] friendId_array = friendInfo_string.split(";");
+                        System.out.println("friendId_array="+ Arrays.asList(friendId_array));
+
+
+                        int friend_id = 10000;
+                        String friend_username = "";
+
+                        for(int i=0; i<friendId_array.length; i++){
+                            if(i%2==0){
+                                friend_id = Integer.valueOf(friendId_array[i]);
+                            }else{
+                                friend_username = friendId_array[i];
+                            }
+
+                            if(i%2==1){
+                                System.out.println("id="+friend_id+" / username="+friend_username);
+                                server.addGuestIdToRoom(roomId, friend_id, friend_username);
+                            }
+                        }
+
+                        sendMsg("room_created/"+roomId);
+                        server.broadcastRoomInfo(roomId, "room"+roomId);
+                        server.broadcastToRoom(roomId, "serverMsg/A room is created.");
+
+                        break;
+                    // 기존 방에 입장했을 때
+                    // enter/userId/username/roomId/roomName
+                    case "enter":
+                        id = Integer.valueOf(array[1]); //사용자 id
                         username = array[2]; //사용자 username
                         roomId = Integer.valueOf(array[3]);
                         roomName = array[4];
 
-                        server.consoleLog(id+" is connected");
+                        server.consoleLog(id+" entered "+roomName+" again.");
 
-                        //이 사용자의 id, 닉네임, socket을 저장한다
-                        // => Server 클래스에서 addGuest()메소드로 이 guest를 목록에 추가함
-
-                        //해당 이름의 방이 있는지 확인하고, 방을 만들거나 입장시킨다
-                        server.checkIfRoomExists(roomId, roomName, this);
+                        //방에 입장시킨다
+                        server.enterExistingRoom(roomId, roomName, this);
 
                         break;
 
