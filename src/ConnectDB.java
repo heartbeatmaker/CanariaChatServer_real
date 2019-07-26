@@ -17,7 +17,7 @@ public class ConnectDB {
             //driver url 뒤에 verify~, useSSl 변수를 넣어주지 않으면 ssl 관련 warning이 뜬다
             String jdbcDriver = "jdbc:mysql://54.180.107.44:3306/app?verifyServerCertificate=false&useSSL=true";
             String dbUser = "root";
-            String dbPass = "achilles2019";
+            String dbPass = "vhxmvhffldh@2019";
             connection = DriverManager.getConnection(jdbcDriver, dbUser, dbPass); //드라이버 연결
             System.out.println("connected to MYSql");
 
