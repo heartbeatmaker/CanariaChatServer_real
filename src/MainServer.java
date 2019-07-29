@@ -149,7 +149,7 @@ public class MainServer {
         guestList_room.add(guest);
 
         //방 이름과 손님 수를 서버 콘솔에 출력한다
-        consoleLog("roomId : " + roomId + ", Number of MainGuests : " + guestList_room.size());
+        consoleLog("roomId : " + roomId + ", Number of Guests : " + guestList_room.size());
     }
 
 
@@ -242,11 +242,13 @@ public class MainServer {
     }
 
 
+    //나를 제외한 방 사람들에게 메시지를 보낸다
     void broadcastToRoomExceptMe(int roomId, String msg, int userId) throws Exception {
 
-        ArrayList<MainGuest> listOfMainGuestsInTheRoom = roomHashMap.get(roomId);
+        ArrayList<MainGuest> guestListOfTheRoom = roomHashMap.get(roomId);
+        consoleLog("guestList of room "+roomId+" : "+guestListOfTheRoom);
 
-        for (MainGuest guest : listOfMainGuestsInTheRoom) {
+        for (MainGuest guest : guestListOfTheRoom) {
             if(guest.id != userId){
                 guest.sendMsg(msg);
             }
@@ -282,6 +284,26 @@ public class MainServer {
         }
 
         broadcastToRoom(roomId, buffer_roomInfo.toString());
+    }
+
+
+    //나에게만 방 정보를 발송한다
+    void broadcastRoomInfoToMyself(MainGuest guest, int roomId, String roomName) throws Exception {
+
+        ArrayList<MainGuest> guestListOfTheRoom = roomHashMap.get(roomId);
+        String roomInfo = roomName+" ("+guestListOfTheRoom.size()+")";
+
+        String memberInfo = "";
+
+        //모든 참여자의
+        for (MainGuest member : guestListOfTheRoom) {
+            memberInfo += member.id+";"+member.username +";";
+        }
+
+        //마지막 ';' 제거
+        memberInfo = memberInfo.substring(0, memberInfo.length()-1);
+
+        guest.sendMsg("roomInfo/"+roomInfo+"/"+memberInfo);
     }
 
 

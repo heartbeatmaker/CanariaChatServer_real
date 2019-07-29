@@ -10,8 +10,10 @@ class MainGuest extends Thread {
 
     int id;
     String username;
-    String roomName;
-    int roomId;
+
+//    String roomName;
+//    int roomId;
+
     MainServer server;
     Socket socket;
     BufferedReader reader;
@@ -67,7 +69,8 @@ class MainGuest extends Thread {
                         System.out.println("FriendInfo="+friendInfo_string);
 
                         //db에 방 정보를 저장하고, 방 id를 얻는다
-                        roomId = connect.insertRoom();
+                        int roomId = connect.insertRoom();
+                        String roomName = "Room "+roomId;
 
                         //방을 개설하고, 현 사용자(=방 개설자)를 그 방에 join 시킨다
                         server.addRoom(roomId, this);
@@ -77,7 +80,10 @@ class MainGuest extends Thread {
                         System.out.println("friendId_array="+ Arrays.asList(friendInfo_array));
 
 
+                        //피초대인들의 id와 username을 따로 모아서 arrayList에 저장한다
                         ArrayList<Integer> friendId_list = new ArrayList<>();
+//                        ArrayList<String > friendUsername_list = new ArrayList<>();
+                        String friendUsername_string = "";
 
                         int friend_id = 10000;
                         String friend_username = "";
@@ -87,7 +93,9 @@ class MainGuest extends Thread {
                                 friend_id = Integer.valueOf(friendInfo_array[i]);
                                 friendId_list.add(friend_id);
                             }else{
-                                friend_username = friendInfo_array[i];
+//                                friend_username = friendInfo_array[i];
+                                friendUsername_string += friendInfo_array[i] + ",";
+//                                friendUsername_list.add(friend_username);
                             }
 
 //                            if(i%2==1){
@@ -97,7 +105,9 @@ class MainGuest extends Thread {
                         }
 
                         System.out.println("friend id list="+friendId_list);
+                        System.out.println("friend username list="+friendUsername_string);
 
+                        //guestList에서 피초대인들의 guest 객체를 찾는다 -> 이 방에 join 시킨다
                         for(int k=0; k<server.guestList.size(); k++){
                             System.out.println("checking..");
 
@@ -114,39 +124,54 @@ class MainGuest extends Thread {
                             }
                         }
 
-                        String first_message = "serverMsg/"+username+" invited friends.";
 
-                        server.broadcastToRoom(roomId,"room_created/"+roomId); //클라이언트에게 방 id를 보냄
-                        server.broadcastRoomInfo(roomId, "room"+roomId); //방 정보를 보냄
-                        server.broadcastToRoom(roomId, first_message); //최초의 메시지
+                        //마지막 "," 제거
+                        friendUsername_string = friendUsername_string.substring(0, friendUsername_string.length()-1);
+
+
+                        //모든 참여자들에게: my_room_created/roomId/방이름/인원/참여자정보(id;username)
+                        ArrayList<MainGuest> guestListOfTheRoom = server.roomHashMap.get(roomId);
+                        String memberInfo = id+";"+username+";"+friendInfo_string; //방 개설자의 id를 맨 앞에 놓는다
+                        server.broadcastToRoom(roomId,"room_created/"+roomId+"/"+roomName+"/"+guestListOfTheRoom.size()+"/"+memberInfo);
+
+                        //모든 참여자에게: 최초의 메시지 발송
+
+//                        msg/roomId/sender_id/sender_username/message
+                        //일반 사용자가 보낸 메시지와 구분하기 위해, id와 username을 기억해놔야 한다
+                        //id=0, username=server
+                        String first_message = "msg/"+roomId+"/0/server/"+username+" invited "+friendUsername_string;
+                        server.broadcastToRoom(roomId, first_message);
 
                         break;
+
                     // 기존 방에 입장했을 때
-                    // enter/userId/username/roomId/roomName
-                    case "enter":
-                        id = Integer.valueOf(array[1]); //사용자 id
-                        username = array[2]; //사용자 username
-                        roomId = Integer.valueOf(array[3]);
-                        roomName = array[4];
+                    // return/roomId/roomName
+                    case "return":
+                        roomId = Integer.valueOf(array[1]);
+                        roomName = array[2];
 
-                        server.consoleLog(id+" entered "+roomName+" again.");
+                        server.consoleLog(username+" returned to "+roomName);
 
-                        //방에 입장시킨다
-                        server.enterExistingRoom(roomId, roomName, this);
+                        //방 정보 발송
+                        server.broadcastRoomInfoToMyself(this, roomId, roomName);
 
                         break;
 
-                    //client.sendMsg("msg/메시지);
+                    //사용자가 메시지를 보냈을 때
                     case "msg":
                         try {
-                            String message = array[1];
+                            int roomId_msg = Integer.valueOf(array[1]);
+                            String message = array[2];
 
-                            //본인이 보낸 메시지를 전달하기 때문에, id를 붙일 필요 없다
-                            sendMsg("myMsg/"+message);
+                            //내가 보낸 메시지 - 남이 보낸 메시지를 구분하면 안 된다 - 나중에 챗방 목록 업데이트 할때 곤란함
                             //누가 보냈는지 알아야 하므로, 사용자의 id와 닉네임을 붙여서 보낸다
-                            server.broadcastToRoomExceptMe(roomId, "msg/"+id+"/"+username+"/"+message, id);
+                            server.broadcastToRoom(roomId_msg, "msg/"+roomId_msg+"/"+id+"/"+username+"/"+message);
                         }catch(Exception e){
-                            System.out.println("msg error: (no room?!)"+e);
+                            StringWriter sw = new StringWriter();
+                            e.printStackTrace(new PrintWriter(sw));
+                            String ex = sw.toString();
+
+                            System.out.println(ex);
                         }
                         break;
 
@@ -154,8 +179,8 @@ class MainGuest extends Thread {
                     case "closeRoom": //사용자가 방을 닫았을 때(inactive 상태)
                         //네트워크 문제로 소켓이 끊긴 상태일 때도 closeRoom 으로 간주한다
 
-                        System.out.println(username+" is now inactive at room ("+roomId+")");
-                        server.broadcastToRoomExceptMe(roomId, "inactive/"+username+" is not reading messages.", id);
+//                        System.out.println(username+" is now inactive at room ("+roomId+")");
+//                        server.broadcastToRoomExceptMe(roomId, "inactive/"+username+" is not reading messages.", id);
 
                         break;
 //                    case "disconnect": //사용자가 방에서 나갔을 때
