@@ -52,6 +52,42 @@ class MainGuest extends Thread {
                     case "connect":
                         id = Integer.valueOf(array[1]); //사용자 id
                         username = array[2]; //사용자 username
+                        String myRoom_id = array[3]; //사용자가 가입한 방id 목록
+
+                        String [] myRoom_id_array = myRoom_id.split(";");
+
+                        //기존에 저장되어있던 socket을 현재 것으로 바꾼다
+                        for(int i=0; i<myRoom_id_array.length; i++){
+                            int roomId = Integer.valueOf(myRoom_id_array[i]);
+                            boolean isMember=false;
+
+                            if(server.roomHashMap.containsKey(roomId)){
+                                System.out.println("room "+roomId+" exists at server.");
+
+                                ArrayList<MainGuest> guestList_room = server.roomHashMap.get(roomId);
+                                for(int k=0; k<guestList_room.size(); k++){
+                                    MainGuest anonymous_guest = guestList_room.get(k);
+                                    if(anonymous_guest.id == id){
+
+                                        anonymous_guest.socket = socket;
+                                        anonymous_guest.reader = reader;
+                                        anonymous_guest.writer = writer;
+
+                                        System.out.println("Changed "+username+"'s socket at room "+roomId);
+                                        isMember = true;
+                                    }
+                                }
+                            }else{
+                                System.out.println("room "+roomId+" doesn't exist at server.");
+                            }
+
+                            if(!isMember){
+                                System.out.println(username+" is not a member of room "+roomId);
+                            }
+
+                        }
+
+
                         break;
 
                     case "disconnect":

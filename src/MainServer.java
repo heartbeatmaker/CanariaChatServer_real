@@ -90,9 +90,12 @@ public class MainServer {
 
     //손님 목록에 해당 사용자 객체를 추가한다
     void addGuest(MainGuest guest) {
+        //있는지 확인하고, 있으면 -> socket 바꿔치기
+        //없으면 -> 새로 추가
 
         guestList.add(guest);
         consoleLog("Number of Guests : " + guestList.size());
+
     }
 
 
