@@ -77,13 +77,14 @@ class MainGuest extends Thread {
                                         isMember = true;
                                     }
                                 }
-                            }else{
-                                System.out.println("room "+roomId+" doesn't exist at server.");
                             }
-
-                            if(!isMember){
-                                System.out.println(username+" is not a member of room "+roomId);
-                            }
+//                            else{
+//                                System.out.println("room "+roomId+" doesn't exist at server.");
+//                            }
+//
+//                            if(!isMember){
+//                                System.out.println(username+" is not a member of room "+roomId);
+//                            }
 
                         }
 
