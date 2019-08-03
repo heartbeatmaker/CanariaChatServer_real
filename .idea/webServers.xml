@@ -2,8 +2,8 @@
 <project version="4">
   <component name="WebServers">
     <option name="servers">
-      <webServer id="15852779-1c0f-4662-a916-58ed990efc52" name="aws" url="http://54.180.107.44">
-        <fileTransfer host="54.180.107.44" port="22" privateKey="D:\aws.pem" rootFolder="/var/www" accessType="SFTP" keyPair="true">
+      <webServer id="15852779-1c0f-4662-a916-58ed990efc52" name="aws" url="http://15.164.193.65">
+        <fileTransfer host="15.164.193.65" port="22" privateKey="D:\aws.pem" rootFolder="/var/www" accessType="SFTP" keyPair="true">
           <advancedOptions>
             <advancedOptions dataProtectionLevel="Private" passiveMode="true" shareSSLContext="true" />
           </advancedOptions>
