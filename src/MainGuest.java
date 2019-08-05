@@ -101,13 +101,13 @@ class MainGuest extends Thread {
                     case "new_room":
 
                         String friendInfo_string = array[1];
+                        int numberOfInvitedMembers;
 
                         System.out.println(username+" created a room.");
                         System.out.println("FriendInfo="+friendInfo_string);
 
                         //db에 방 정보를 저장하고, 방 id를 얻는다
                         int roomId = connect.insertRoom();
-                        String roomName = "Room "+roomId;
 
                         //방을 개설하고, 현 사용자(=방 개설자)를 그 방에 join 시킨다
                         server.addRoom(roomId, this);
@@ -115,6 +115,15 @@ class MainGuest extends Thread {
                         //guestList 에서, 나머지 참여자(=초대된 사람들)들의 guest 객체를 찾는다
                         String[] friendInfo_array = friendInfo_string.split(";");
                         System.out.println("friendId_array="+ Arrays.asList(friendInfo_array));
+
+
+                        String roomName = "";
+                        numberOfInvitedMembers = friendInfo_array.length/2; //초대한 친구의 수
+                        if(numberOfInvitedMembers == 1){ //1대1 채팅일 경우
+                            roomName = "personal_chat";
+                        }else{//그룹 채팅일 경우
+                            roomName = "Group chat";
+                        }
 
 
                         //피초대인들의 id와 username을 따로 모아서 arrayList에 저장한다
@@ -169,7 +178,25 @@ class MainGuest extends Thread {
                         //모든 참여자들에게: my_room_created/roomId/방이름/인원/참여자정보(id;username)
                         ArrayList<MainGuest> guestListOfTheRoom = server.roomHashMap.get(roomId);
                         String memberInfo = id+";"+username+";"+friendInfo_string; //방 개설자의 id를 맨 앞에 놓는다
-                        server.broadcastToRoom(roomId,"room_created/"+roomId+"/"+roomName+"/"+guestListOfTheRoom.size()+"/"+memberInfo);
+
+                        //1대1채팅의 경우, '방 이름 = 상대방 이름' 으로 설정한다
+                        if(numberOfInvitedMembers == 1){//1대1 채팅일 경우
+
+                            //이 사용자에게 보내는 메시지
+                            roomName = friendInfo_array[1]; //방이름 = 상대방의 이름
+                            sendMsg("room_created/"+roomId+"/"+roomName+"/"+guestListOfTheRoom.size()+"/"+memberInfo);
+
+                            //상대방에게 보내는 메시지
+                            ArrayList<MainGuest> guestsOfTheRoom = server.roomHashMap.get(roomId);
+                            for (MainGuest guest : guestsOfTheRoom) {
+                                if(guest.id != id){
+                                    roomName = username; //방이름 = 이 사용자의 이름
+                                    guest.sendMsg("room_created/"+roomId+"/"+roomName+"/"+guestListOfTheRoom.size()+"/"+memberInfo);
+                                }
+                            }
+                        }else{ //그룹 채팅일 경우
+                            server.broadcastToRoom(roomId,"room_created/"+roomId+"/"+roomName+"/"+guestListOfTheRoom.size()+"/"+memberInfo);
+                        }
 
                         //모든 참여자에게: 최초의 메시지 발송
 
@@ -212,6 +239,88 @@ class MainGuest extends Thread {
                         }
                         break;
 
+                    case "invite": //기존 채팅방에 누군가를 초대했을 때
+
+                        int roomId_invitation = Integer.valueOf(array[1]);
+                        String invited_friendInfo_string = array[2];
+
+                        //guestList 에서, 나머지 참여자(=초대된 사람들)들의 guest 객체를 찾는다
+                        String[] invited_friendInfo_array = invited_friendInfo_string.split(";");
+                        System.out.println("invited_friendInfo_array="+ Arrays.asList(invited_friendInfo_array));
+
+
+                        //피초대인들의 id와 username을 따로 모아서 arrayList에 저장한다
+                        ArrayList<Integer> invited_friendId_list = new ArrayList<>();
+                        ArrayList<String > invited_friendUsername_list = new ArrayList<>();
+                        String invited_friendUsername_string = "";
+
+                        int invited_friend_id = 10000;
+                        String invited_friend_username = "";
+
+                        for(int i=0; i<invited_friendInfo_array.length; i++){
+                            if(i%2==0){
+                                friend_id = Integer.valueOf(invited_friendInfo_array[i]);
+                                invited_friendId_list.add(friend_id);
+                            }else{
+                                invited_friend_username = invited_friendInfo_array[i];
+                                invited_friendUsername_list.add(invited_friend_username);
+
+                                invited_friendUsername_string += invited_friend_username + ",";
+                            }
+
+                        }
+
+                        //마지막 "," 제거
+                        invited_friendUsername_string = invited_friendUsername_string.substring(0, invited_friendUsername_string.length()-1);
+
+
+                        //기존 참여자들에게 알림 발송
+                        //new_member/방id/추가memberInfo(id;username)
+                        String message_newMember = "new_member/"+roomId_invitation+"/"+invited_friendInfo_string;
+                        server.broadcastToRoom(roomId_invitation, message_newMember);
+
+
+                        //이 방의 전체 멤버info를 구한다(추가된 멤버info + 기존 멤버info)
+                        String all_memberInfo = invited_friendInfo_string;
+                        ArrayList<MainGuest> guestList_room = server.roomHashMap.get(roomId_invitation);
+                        for(int i=0; i<guestList_room.size(); i++){
+                            MainGuest guest = guestList_room.get(i);
+                            all_memberInfo += ";"+ guest.id + ";" + guest.username;
+                        }
+                        System.out.println("all_memberInfo="+all_memberInfo);
+
+
+                        //guestList에서 피초대인들의 guest 객체를 찾는다
+                        // -> 이 방에 join 시키고 + 초대 되었다고 알림 발송
+                        for(int k=0; k<server.guestList.size(); k++){
+                            System.out.println("checking..");
+
+                            MainGuest guest = server.guestList.get(k);
+
+                            for(int j=0; j<invited_friendId_list.size(); j++){
+                                System.out.println("guest id="+guest.id+" / friend id="+invited_friendId_list.get(j));
+
+                                if(guest.id == invited_friendId_list.get(j)){
+
+                                    //이 방에 join 시킨다
+                                    server.addGuestToRoom(roomId_invitation, guest);
+
+                                    //초대 알림 발송
+                                    //invited/방id/방이름(=Group chat)/memberInfo
+                                    String message_invitation = "invited/"+roomId_invitation+"/Group chat/"+all_memberInfo;
+                                    guest.sendMsg(message_invitation);
+                                    break;
+                                }
+                            }
+                        }
+
+
+                        //서버 메시지를 발송한다
+                        //msg/방id/0/server/ㅇㅇ invited xx, aa, ee
+                        String serverMsg_invitation = "msg/"+roomId_invitation+"/0/server/"+username+" invited "+invited_friendUsername_string;
+                        server.broadcastToRoom(roomId_invitation, serverMsg_invitation);
+
+                        break;
 
                     case "closeRoom": //사용자가 방을 닫았을 때(inactive 상태)
                         //네트워크 문제로 소켓이 끊긴 상태일 때도 closeRoom 으로 간주한다
@@ -250,7 +359,7 @@ class MainGuest extends Thread {
 
                 //이 손님을 손님 목록에서 삭제한다
                 server.removeGuest(this);
-
+//                this.interrupt(); 이거 해야되나??
 
 
                 //-> 해당 사용자를 inactive 상태로 간주한다
