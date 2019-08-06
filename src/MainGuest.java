@@ -246,6 +246,8 @@ class MainGuest extends Thread {
 
                         //guestList 에서, 나머지 참여자(=초대된 사람들)들의 guest 객체를 찾는다
                         String[] invited_friendInfo_array = invited_friendInfo_string.split(";");
+                        int numberOfNewMembers_invitation = invited_friendInfo_array.length/2;
+
                         System.out.println("invited_friendInfo_array="+ Arrays.asList(invited_friendInfo_array));
 
 
@@ -290,6 +292,28 @@ class MainGuest extends Thread {
                         System.out.println("all_memberInfo="+all_memberInfo);
 
 
+                        //방 이름을 정한다
+                        String roomName_invitation = "";
+                        int numberOfMembers_origin = guestList_room.size();
+                        if(numberOfMembers_origin == 1){
+
+                            if(numberOfNewMembers_invitation == 1){
+                                //1명있는 방에 혼자 초대된 것이라면 -> 1대1 채팅 -> roomName = 상대방 이름
+                                roomName_invitation = all_memberInfo.split(";")[3];
+
+                            }else if(numberOfNewMembers_invitation > 1){
+                                //1명있는 방에 2명이상 초대된 것이면 -> roomName = group chat
+                                roomName_invitation = "Group chat";
+                            }
+
+                        }else if(numberOfMembers_origin > 1){
+                            //2명이상 있는 방에 초대된 것이라면 -> roomName = group chat
+                            roomName_invitation = "Group chat";
+                        }
+
+
+
+
                         //guestList에서 피초대인들의 guest 객체를 찾는다
                         // -> 이 방에 join 시키고 + 초대 되었다고 알림 발송
                         for(int k=0; k<server.guestList.size(); k++){
@@ -306,8 +330,8 @@ class MainGuest extends Thread {
                                     server.addGuestToRoom(roomId_invitation, guest);
 
                                     //초대 알림 발송
-                                    //invited/방id/방이름(=Group chat)/memberInfo
-                                    String message_invitation = "invited/"+roomId_invitation+"/Group chat/"+all_memberInfo;
+                                    //invited/방id/방이름/memberInfo
+                                    String message_invitation = "invited/"+roomId_invitation+"/"+roomName_invitation+"/"+all_memberInfo;
                                     guest.sendMsg(message_invitation);
                                     break;
                                 }
