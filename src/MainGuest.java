@@ -246,10 +246,14 @@ class MainGuest extends Thread {
                             int roomId_img = Integer.valueOf(array[1]);
                             String filename_string = array[2];
 
+                            System.out.println("msg_image");
+
                             //이 사용자를 제외한 채팅방 참여자에게 메시지를 전달한다
                             //누가 보냈는지 알아야 하므로, 사용자의 id와 닉네임을 붙여서 보낸다
                             //@@@메시지 내용에 image!-!를 붙인다. 이미지라는 것을 표시하기 위함
                             String message = "msg/"+roomId_img+"/"+id+"/"+username+"/image!-!"+filename_string;
+                            System.out.println("msg="+message);
+
                             server.broadcastToRoomExceptMe(roomId_img, message, id);
 
                         }catch(Exception e){

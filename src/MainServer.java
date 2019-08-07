@@ -248,14 +248,19 @@ public class MainServer {
     //나를 제외한 방 사람들에게 메시지를 보낸다
     void broadcastToRoomExceptMe(int roomId, String msg, int userId) throws Exception {
 
+        consoleLog("broadcastToRoomExceptMe start");
+
         ArrayList<MainGuest> guestListOfTheRoom = roomHashMap.get(roomId);
         consoleLog("guestList of room "+roomId+" : "+guestListOfTheRoom);
 
         for (MainGuest guest : guestListOfTheRoom) {
             if(guest.id != userId){
+                consoleLog("sending msg to "+guest.username);
                 guest.sendMsg(msg);
             }
         }
+
+        consoleLog("broadcastToRoomExceptMe finish");
     }
 
 
