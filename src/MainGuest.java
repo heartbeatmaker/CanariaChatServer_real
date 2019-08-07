@@ -223,6 +223,7 @@ class MainGuest extends Thread {
 
                     //사용자가 메시지를 보냈을 때
                     case "msg":
+                        //msg/roomId/내용
                         try {
                             int roomId_msg = Integer.valueOf(array[1]);
                             String message = array[2];
@@ -238,6 +239,28 @@ class MainGuest extends Thread {
                             System.out.println(ex);
                         }
                         break;
+
+                    case "msg_image":
+                        //msg_image/roomId/파일이름1;파일이름2;파일이름3..
+                        try {
+                            int roomId_img = Integer.valueOf(array[1]);
+                            String filename_string = array[2];
+
+                            //이 사용자를 제외한 채팅방 참여자에게 메시지를 전달한다
+                            //누가 보냈는지 알아야 하므로, 사용자의 id와 닉네임을 붙여서 보낸다
+                            //@@@메시지 내용에 image!-!를 붙인다. 이미지라는 것을 표시하기 위함
+                            String message = "msg/"+roomId_img+"/"+id+"/"+username+"/image!-!"+filename_string;
+                            server.broadcastToRoomExceptMe(roomId_img, message, id);
+
+                        }catch(Exception e){
+                            StringWriter sw = new StringWriter();
+                            e.printStackTrace(new PrintWriter(sw));
+                            String ex = sw.toString();
+
+                            System.out.println(ex);
+                        }
+                        break;
+
 
                     case "invite": //기존 채팅방에 누군가를 초대했을 때
 
