@@ -299,7 +299,15 @@ public class MainServer {
     void broadcastRoomInfoToMyself(MainGuest guest, int roomId, String roomName) throws Exception {
 
         ArrayList<MainGuest> guestListOfTheRoom = roomHashMap.get(roomId);
-        String roomInfo = roomName+" ("+guestListOfTheRoom.size()+")";
+
+        int numberOfMembers = guestListOfTheRoom.size();
+        String roomInfo = "";
+
+        if(numberOfMembers <=2){
+            roomInfo = roomName;
+        }else{
+            roomInfo = roomName+" ("+numberOfMembers+")";
+        }
 
         String memberInfo = "";
 
