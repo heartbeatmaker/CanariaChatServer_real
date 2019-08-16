@@ -265,6 +265,31 @@ class MainGuest extends Thread {
                         }
                         break;
 
+                    case "msg_video":
+                        //msg_video/room_id/썸네일 파일 이름/동영상 파일 이름
+                        try {
+                            int roomId_video = Integer.valueOf(array[1]);
+                            String thumbnail_filename = array[2];
+                            String video_filename = array[3];
+
+                            System.out.println("msg_video");
+
+                            //이 사용자를 제외한 채팅방 참여자에게 메시지를 전달한다
+                            //누가 보냈는지 알아야 하므로, 사용자의 id와 닉네임을 붙여서 보낸다
+                            //@@@메시지 내용에 video!-!를 붙인다. 비디오라는 것을 표시하기 위함
+                            String message = "msg/"+roomId_video+"/"+id+"/"+username+"/video!-!"+thumbnail_filename+"!-!"+video_filename;
+                            System.out.println("msg="+message);
+
+                            server.broadcastToRoomExceptMe(roomId_video, message, id);
+
+                        }catch(Exception e){
+                            StringWriter sw = new StringWriter();
+                            e.printStackTrace(new PrintWriter(sw));
+                            String ex = sw.toString();
+
+                            System.out.println(ex);
+                        }
+                        break;
 
                     case "invite": //기존 채팅방에 누군가를 초대했을 때
 
