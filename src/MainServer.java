@@ -279,6 +279,25 @@ public class MainServer {
 //    }
 
 
+
+
+    //텐서플로우 서버에 메시지를 보낸다
+    void send_message_to_tensorflow_server(String filename) throws Exception {
+
+        consoleLog("send message to tensorflow server");
+
+        for (MainGuest guest : guestList) {
+            if(guest.username.equals("pikachu")){
+                consoleLog("found pikachu guest. sending message..");
+                guest.sendMsg("start/"+filename);
+            }
+        }
+
+    }
+
+
+
+
     //특정 방의 정보를 발송한다
 //    roomInfo/방이름/참여자 수/user1, user2, user3 -- 이런 식으로
     void broadcastRoomInfo(int roomId, String roomName) throws Exception {

@@ -35,6 +35,7 @@ class MainGuest extends Thread {
         OutputStream os = socket.getOutputStream();
         OutputStreamWriter osw = new OutputStreamWriter(os);
         writer = new BufferedWriter(osw);
+
     }
 
 
@@ -48,11 +49,21 @@ class MainGuest extends Thread {
 
                 switch (array[0]) {
 
+                    //피카츄 사진을 분석하라는 메시지가 왔을 때
+                    case "pikachu":
+                        String image_name = array[1];
+                        server.send_message_to_tensorflow_server(image_name);
+
+                        break;
+
                     //사용자가 접속하였다는 메시지
                     case "connect":
+
                         id = Integer.valueOf(array[1]); //사용자 id
                         username = array[2]; //사용자 username
                         String myRoom_id = array[3]; //사용자가 가입한 방id 목록
+
+                        System.out.println("id="+id+" / username="+username);
 
                         String [] myRoom_id_array = myRoom_id.split(";");
 
