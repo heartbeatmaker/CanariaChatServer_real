@@ -57,22 +57,22 @@ class MainGuest extends Thread {
                         break;
 
                     //피카츄 이미지분석 서버로부터의 메시지
-                    //pikachu_server/성공여부/원본파일이름
+                    //pikachu_server/성공여부/파일이름 -- 성공 시: 분석된 파일이름 // 실패 시: 원본 파일이름
                     case "pikachu_server":
 
                         String success_or_fail = array[1];
-                        String filename_origin = array[2];
+                        String filename = array[2];
 
-                        String[] filename_split = filename_origin.split("_");
-                        int user_id = Integer.valueOf(filename_split[0]);
+                        String[] filename_split = filename.split("_");
 
                         if(success_or_fail.equals("success")){
-
-                            String output_filename = "processed_"+filename_origin;
-
-                            server.send_message_to_guest(user_id, "success/"+output_filename);
+                            //파일이름: processed_피카츄 수_유저id_사용자가 업로드한 원본파일 이름
+                            int user_id = Integer.valueOf(filename_split[2]);
+                            server.send_message_to_guest(user_id, "success/"+filename);
                         }else{
-                            server.send_message_to_guest(user_id, "fail/"+filename_origin);
+                            //파일이름: 유저id_사용자가 업로드한 원본파일 이름
+                            int user_id = Integer.valueOf(filename_split[0]);
+                            server.send_message_to_guest(user_id, "fail/"+filename);
                         }
 
                         break;
