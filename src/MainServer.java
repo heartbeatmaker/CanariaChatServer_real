@@ -296,6 +296,20 @@ public class MainServer {
     }
 
 
+    //특정인에게 메시지를 보낸다
+    void send_message_to_guest(int user_id, String message) throws Exception {
+
+        for (MainGuest guest : guestList) {
+            if(guest.id == user_id){
+                consoleLog("found guest. sending message..");
+                guest.sendMsg("pikachu_output/"+message);
+            }
+        }
+
+    }
+
+
+
 
 
     //특정 방의 정보를 발송한다
