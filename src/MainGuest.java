@@ -430,11 +430,25 @@ class MainGuest extends Thread {
 
                         break;
 
-                    case "closeRoom": //사용자가 방을 닫았을 때(inactive 상태)
-                        //네트워크 문제로 소켓이 끊긴 상태일 때도 closeRoom 으로 간주한다
+                    case "leave": //사용자가 방에서 나갔을 때
+                        //leave/방id
+                        int room_id = Integer.valueOf(array[1]);
 
-//                        System.out.println(username+" is now inactive at room ("+roomId+")");
-//                        server.broadcastToRoomExceptMe(roomId, "inactive/"+username+" is not reading messages.", id);
+                        //이 사용자를 해당 방에서 제거한다 - 이 방에 남은 사용자의 수를 반환한다
+                        int number_of_left_members = server.removeGuestFromRoom(room_id, this);
+
+                        //방에 남은 사용자가 있을 때
+                        if(number_of_left_members >= 1){
+                            //방 참여자들에게 알림 발송
+                            //member_out/방id/떠난사람 id
+                            String message_member_out = "member_out/"+room_id+"/"+id;
+                            server.broadcastToRoom(room_id, message_member_out);
+
+                            //방 참여자들에게 서버 메시지를 발송한다
+                            //msg/방id/0/server/ㅇㅇ left the room
+                            String serverMsg_message_member_out = "msg/"+room_id+"/0/server/"+username+" left the room";
+                            server.broadcastToRoom(room_id, serverMsg_message_member_out);
+                        }
 
                         break;
 //                    case "disconnect": //사용자가 방에서 나갔을 때

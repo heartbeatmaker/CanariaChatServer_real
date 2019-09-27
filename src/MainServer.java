@@ -142,6 +142,42 @@ public class MainServer {
     // /////////////////////////////////////////////
 
 
+    //사용자를 방의 손님목록에서 제거하는 메소드
+    int removeGuestFromRoom(int roomId, MainGuest guest) {
+
+        //방 목록 맵에 저장되어 있던, 이 방의 손님 리스트를 참조한다
+        ArrayList<MainGuest> guestList_room = roomHashMap.get(roomId);
+
+        //원래 손님 수
+        int number_of_guests_before = guestList_room.size();
+
+        //이 손님을 리스트에서 제거한다
+        guestList_room.remove(guest);
+
+        int number_of_guests_after = guestList_room.size();
+
+        //방 이름과 손님 수를 서버 콘솔에 출력한다
+        consoleLog("Removed "+guest.username+" from room " + roomId + ", " +
+                "Number of Guests : " + number_of_guests_before +" -> " + number_of_guests_after);
+
+        //이 방에 아무도 남지 않았으면 -> roomHashMap 에서 이 방을 삭제한다
+        if(number_of_guests_after == 0){
+
+            String rooms_before = roomHashMap.keySet().toString();
+
+            roomHashMap.remove(roomId);
+            consoleLog("This room is empty. Removed from the roomHashMap");
+
+            String rooms_after = roomHashMap.keySet().toString();
+
+            consoleLog("Room list: "+rooms_before+" -> "+rooms_after);
+        }
+
+        return number_of_guests_after;
+    }
+
+
+
     //사용자를 방의 손님목록에 추가하는 메소드
     void addGuestToRoom(int roomId, MainGuest guest) {
 
